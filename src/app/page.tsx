@@ -1,22 +1,31 @@
 "use client";
 
 import { KanbanBoard } from "@/components/board/kanban-board";
-import { boards, columns, cards, lanes, users } from "@/lib/mock-data";
+import { useBoardContext } from "@/lib/board-context";
+import { EmptyBoardState } from "@/components/board/empty-board-state";
 
 export default function Home() {
-  const currentBoard = boards[0];
+  const { currentBoard, columns, cards, lanes, users, loading } = useBoardContext();
+
+  if (loading) {
+    return (
+      <main className="flex-1 flex items-center justify-center">
+        <p className="text-muted-foreground">Loading…</p>
+      </main>
+    );
+  }
+
+  if (!currentBoard) {
+    return <EmptyBoardState />;
+  }
 
   return (
     <main className="flex-1 flex flex-col overflow-hidden">
       <KanbanBoard
         board={currentBoard}
-        columns={columns.filter((c) => c.board_id === currentBoard.id)}
-        cards={cards.filter((c) =>
-          columns.some(
-            (col) => col.id === c.column_id && col.board_id === currentBoard.id
-          )
-        )}
-        lanes={lanes.filter((l) => l.board_id === currentBoard.id)}
+        columns={columns}
+        cards={cards}
+        lanes={lanes}
         users={users}
       />
     </main>

@@ -4,6 +4,7 @@ import { KanbanLane } from "./kanban-lane";
 import { KanbanColumn } from "./kanban-column";
 import { Card, Column, Lane, User, Board } from "@/lib/types";
 import { useTheme } from "@/components/providers";
+import { useBoardContext } from "@/lib/board-context";
 
 type KanbanBoardProps = {
   board: Board;
@@ -16,36 +17,35 @@ type KanbanBoardProps = {
 export function KanbanBoard({
   board,
   columns: initialColumns,
-  cards: initialCards,
+  cards,
   lanes: initialLanes,
   users,
 }: KanbanBoardProps) {
-  const [cards, setCards] = useState(initialCards);
   const { density } = useTheme();
+  const { moveCard } = useBoardContext();
   
   const [isClient, setIsClient] = useState(false);
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-
   const onCardDrop = (cardId: string, newColumnId: string, newLaneId: string | null) => {
-    // In a real app, this would trigger an API call.
-    // For now, we update the local state.
-    setCards((prevCards) =>
-      prevCards.map((card) =>
-        card.id === cardId ? { ...card, column_id: newColumnId, lane_id: newLaneId } : card
-      )
-    );
-    console.log(`Moved card ${cardId} to column ${newColumnId} in lane ${newLaneId}`);
+    moveCard(cardId, newColumnId, newLaneId);
   };
 
   const sortedLanes = [...initialLanes, { id: "unassigned", name: "Unassigned", color: "bg-muted/20", board_id: board.id, order: initialLanes.length + 1 }].sort((a, b) => a.order - b.order);
-  const sortedColumns = initialColumns.sort((a, b) => a.order - b.order);
+  const sortedColumns = [...initialColumns].sort((a, b) => a.order - b.order);
 
-  // Render a skeleton or loading state on the server
   if (!isClient) {
     return <div className="flex-1 p-6 bg-muted/20 animate-pulse" />;
+  }
+
+  if (sortedColumns.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <p className="text-muted-foreground">No columns yet. Add columns in Settings.</p>
+      </div>
+    );
   }
 
   return (
@@ -77,5 +77,4 @@ export function KanbanBoard({
   );
 }
 
-// cn utility needs to be defined if not globally available
 const cn = (...classes: (string | undefined | null | false)[]) => classes.filter(Boolean).join(' ');

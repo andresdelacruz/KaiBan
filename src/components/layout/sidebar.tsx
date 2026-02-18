@@ -14,12 +14,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { users, boards } from "@/lib/mock-data";
+import { useBoardContext } from "@/lib/board-context";
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const currentUser = users[0];
-  const currentBoard = boards[0];
+  const { currentUser, boards, currentBoard, selectBoard } = useBoardContext();
 
   const navItems = [
     { href: "/", label: "Board", icon: Icons.board },
@@ -36,10 +35,12 @@ export function AppSidebar() {
               <Button variant="ghost" className="w-full justify-start text-left h-auto py-2 px-3">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center text-primary-foreground font-bold">
-                    {currentBoard.name.charAt(0)}
+                    {currentBoard?.name?.charAt(0) ?? "?"}
                   </div>
                   <div className="flex flex-col items-start">
-                    <span className="font-semibold text-sm text-foreground">{currentBoard.name}</span>
+                    <span className="font-semibold text-sm text-foreground">
+                      {currentBoard?.name ?? "No board"}
+                    </span>
                     <span className="text-xs text-muted-foreground">KanbanZen</span>
                   </div>
                 </div>
@@ -47,8 +48,13 @@ export function AppSidebar() {
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-64">
               <DropdownMenuLabel>Boards</DropdownMenuLabel>
+              {boards.length === 0 && (
+                <DropdownMenuItem disabled>No boards</DropdownMenuItem>
+              )}
               {boards.map((board) => (
-                <DropdownMenuItem key={board.id}>{board.name}</DropdownMenuItem>
+                <DropdownMenuItem key={board.id} onClick={() => selectBoard(board)}>
+                  {board.name}
+                </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -72,8 +78,13 @@ export function AppSidebar() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="w-full justify-start h-auto py-2 px-3">
                <div className="flex items-center gap-3 w-full">
-                  <UserAvatar user={currentUser} className="w-8 h-8"/>
-                  <span className="text-sm font-medium text-foreground truncate">{currentUser.name}</span>
+                  <UserAvatar
+                    user={currentUser ? { id: currentUser.id, name: currentUser.name, avatarUrl: currentUser.avatarUrl } : undefined}
+                    className="w-8 h-8"
+                  />
+                  <span className="text-sm font-medium text-foreground truncate">
+                    {currentUser?.name ?? "Not signed in"}
+                  </span>
                </div>
             </Button>
           </DropdownMenuTrigger>

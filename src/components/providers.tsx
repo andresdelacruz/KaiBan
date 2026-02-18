@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { BoardProvider } from "@/lib/board-context";
 
 type Theme = "dark" | "light";
 type Density = "comfortable" | "dense";
@@ -66,7 +67,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeProviderContext.Provider value={{ theme, density, setTheme, setDensity, toggleTheme, toggleDensity }}>
-      {children}
+      <BoardProvider>
+        {children}
+      </BoardProvider>
     </ThemeProviderContext.Provider>
   );
 }
