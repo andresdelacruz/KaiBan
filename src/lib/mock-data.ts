@@ -1,0 +1,150 @@
+import type { Board, Column, Card, Lane, User, Priority } from "@/lib/types";
+
+export const users: User[] = [
+  { id: "user-1", name: "Alex Johnson", avatarUrl: "1" },
+  { id: "user-2", name: "Maria Garcia", avatarUrl: "2" },
+  { id: "user-3", name: "James Smith", avatarUrl: "3" },
+  { id: "user-4", name: "Li Wei", avatarUrl: "4" },
+  { id: "user-5", name: "Aisha Khan", avatarUrl: "5" },
+];
+
+export const boards: Board[] = [
+  { id: "board-1", name: "Project Phoenix" },
+  { id: "board-2", name: "Marketing Q3" },
+];
+
+export const lanes: Lane[] = [
+  { id: "lane-1", name: "Frontend", color: "bg-blue-900/50", board_id: "board-1", order: 1 },
+  { id: "lane-2", name: "Backend", color: "bg-green-900/50", board_id: "board-1", order: 2 },
+  { id: "lane-3", name: "UX/UI", color: "bg-purple-900/50", board_id: "board-1", order: 3 },
+];
+
+export const columns: Column[] = [
+  { id: "col-1", name: "Backlog", board_id: "board-1", wip_limit: null, order: 1 },
+  { id: "col-2", name: "To Do", board_id: "board-1", wip_limit: 5, order: 2 },
+  { id: "col-3", name: "In Progress", board_id: "board-1", wip_limit: 3, order: 3 },
+  { id: "col-4", name: "Done", board_id: "board-1", wip_limit: null, order: 4 },
+];
+
+const priorities: Priority[] = ["P0", "P1", "P2", "P3"];
+
+export const cards: Card[] = [
+  {
+    id: "card-1",
+    title: "Implement user authentication",
+    description: "Setup JWT-based authentication with email/password.",
+    priority: "P0",
+    owner_id: "user-2",
+    column_id: "col-2",
+    lane_id: "lane-2",
+    epic_id: "epic-1",
+    feature_id: "feat-1",
+    checklist: [
+      { id: "c1-1", text: "Create database schema", completed: true },
+      { id: "c1-2", text: "Implement login endpoint", completed: true },
+      { id: "c1-3", text: "Implement registration endpoint", completed: false },
+    ],
+    comments: [
+      { id: "co1-1", text: "Don't forget to add password hashing.", author_id: "user-1", created_at: "2023-10-26T10:00:00Z" }
+    ],
+    order: 1,
+  },
+  {
+    id: "card-2",
+    title: "Design landing page hero section",
+    description: "Create mockups and final design assets for the main landing page.",
+    priority: "P1",
+    owner_id: "user-3",
+    column_id: "col-1",
+    lane_id: "lane-3",
+    epic_id: "epic-2",
+    feature_id: "feat-2",
+    checklist: [],
+    comments: [],
+    order: 1,
+  },
+  {
+    id: "card-3",
+    title: "Setup CI/CD pipeline",
+    description: "Automate testing and deployment using GitHub Actions.",
+    priority: "P1",
+    owner_id: "user-1",
+    column_id: "col-3",
+    lane_id: "lane-2",
+    epic_id: "epic-1",
+    feature_id: "feat-3",
+    checklist: [{ id: "c3-1", text: "Configure build step", completed: true }, { id: "c3-2", text: "Add unit tests", completed: false }],
+    comments: [],
+    order: 1,
+  },
+  {
+    id: "card-4",
+    title: "Develop card component",
+    description: "Build the reusable Kanban card component in React.",
+    priority: "P2",
+    owner_id: "user-4",
+    column_id: "col-3",
+    lane_id: "lane-1",
+    epic_id: "epic-3",
+    feature_id: "feat-4",
+    checklist: [],
+    comments: [],
+    order: 2,
+  },
+  {
+    id: "card-5",
+    title: "API documentation for /users",
+    description: "Write OpenAPI spec for the user management endpoints.",
+    priority: "P3",
+    owner_id: "user-2",
+    column_id: "col-4",
+    lane_id: "lane-2",
+    epic_id: "epic-1",
+    feature_id: "feat-1",
+    checklist: [],
+    comments: [],
+    order: 1,
+  },
+    {
+    id: "card-6",
+    title: "Fix responsive layout bug on mobile",
+    description: "The main navigation breaks on screen widths below 400px.",
+    priority: "P0",
+    owner_id: "user-4",
+    column_id: "col-2",
+    lane_id: "lane-1",
+    epic_id: "epic-3",
+    feature_id: "feat-4",
+    checklist: [],
+    comments: [],
+    order: 2,
+  },
+  {
+    id: "card-7",
+    title: "User research for new feature",
+    description: "Conduct interviews with 5 target users.",
+    priority: "P2",
+    owner_id: "user-3",
+    column_id: "col-1",
+    lane_id: "lane-3",
+    epic_id: "epic-2",
+    feature_id: "feat-5",
+    checklist: [{id: 'c7-1', text: 'Draft interview questions', completed: true}, {id: 'c7-2', text: 'Schedule sessions', completed: false}],
+    comments: [],
+    order: 2,
+  },
+  {
+    id: "card-8",
+    title: "Refactor database connection pool",
+    description: "Improve performance by optimizing the connection pooling strategy.",
+    priority: "P1",
+    owner_id: null,
+    column_id: "col-1",
+    lane_id: "lane-2",
+    epic_id: "epic-1",
+    feature_id: "feat-3",
+    checklist: [],
+    comments: [],
+    order: 3,
+  },
+];
