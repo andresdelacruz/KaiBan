@@ -21,6 +21,7 @@ type BoardContextState = {
   createBoard: (name: string) => Promise<Board | null>;
   refreshBoard: () => Promise<void>;
   moveCard: (cardId: string, newColumnId: string, newLaneId: string | null) => Promise<void>;
+  addCard: (columnId: string, title: string) => Promise<void>;
 };
 
 const BoardContext = createContext<BoardContextState | undefined>(undefined);
@@ -114,6 +115,21 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const addCard = async (columnId: string, title: string) => {
+    if (!currentBoard) return;
+    try {
+      const card = await api.createCard({
+        boardId: currentBoard.id,
+        columnId,
+        title,
+        order: cards.filter((c) => c.column_id === columnId).length,
+      });
+      setCards((prev) => [...prev, card]);
+    } catch (e) {
+      console.error("Add card error:", e);
+    }
+  };
+
   return (
     <BoardContext.Provider
       value={{
@@ -129,6 +145,7 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
         createBoard: createBoardAction,
         refreshBoard,
         moveCard,
+        addCard,
       }}
     >
       {children}

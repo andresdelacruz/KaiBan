@@ -64,6 +64,17 @@ export async function createBoard(name: string, ownerId: string): Promise<Board>
     role: "admin",
   });
 
+  // Create default columns
+  const defaultColumns = ["Backlog", "To Do", "In Progress", "Review", "Done"];
+  for (let i = 0; i < defaultColumns.length; i++) {
+    await supabase.from("columns").insert({
+      board_id: data.id,
+      name: defaultColumns[i],
+      order: i,
+      wip_limit: null,
+    });
+  }
+
   return data as Board;
 }
 
@@ -297,4 +308,15 @@ export async function addComment(
 export async function deleteComment(id: string): Promise<void> {
   const { error } = await supabase.from("comments").delete().eq("id", id);
   if (error) throw error;
+}
+
+// ─── Board Members ─────────────────────────────────────────
+
+export async function getBoardMembers(boardId: string): Promise<{ user_id: string; role: string }[]> {
+  const { data, error } = await supabase
+    .from("board_members")
+    .select("user_id, role")
+    .eq("board_id", boardId);
+  if (error) throw error;
+  return data ?? [];
 }

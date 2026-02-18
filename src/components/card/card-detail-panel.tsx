@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, User, ChecklistItem, Comment as CommentType } from "@/lib/types";
+import { Card as CardType, User, ChecklistItem, Priority } from "@/lib/types";
 import {
   Sheet,
   SheetContent,
@@ -16,28 +16,75 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
-import { CloseWithEvidenceModal } from "./close-with-evidence-modal";
 import { Separator } from "../ui/separator";
 import { format } from "date-fns";
 import React, { useState } from "react";
 import { ScrollArea } from "../ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import * as api from "@/lib/api";
+import { useBoardContext } from "@/lib/board-context";
 
 interface CardDetailPanelProps {
-  card: Card;
+  card: CardType;
   users: User[];
   children: React.ReactNode;
 }
 
 export function CardDetailPanel({ card, users, children }: CardDetailPanelProps) {
+  const { currentUser, refreshBoard } = useBoardContext();
   const owner = users.find((u) => u.id === card.owner_id);
   const [checklist, setChecklist] = useState(card.checklist);
+  const [description, setDescription] = useState(card.description);
+  const [newCheckItem, setNewCheckItem] = useState("");
+  const [newComment, setNewComment] = useState("");
+  const [comments, setComments] = useState(card.comments);
+  const [priority, setPriority] = useState<Priority>(card.priority);
+  const [ownerId, setOwnerId] = useState(card.owner_id ?? "");
 
-  const toggleChecklistItem = (itemId: string) => {
-    setChecklist(
-      checklist.map((item) =>
-        item.id === itemId ? { ...item, completed: !item.completed } : item
-      )
-    );
+  const toggleChecklistItem = async (itemId: string) => {
+    const item = checklist.find((i) => i.id === itemId);
+    if (!item) return;
+    const updated = !item.completed;
+    setChecklist(checklist.map((i) => i.id === itemId ? { ...i, completed: updated } : i));
+    await api.updateChecklistItem(itemId, { completed: updated });
+  };
+
+  const addCheckItem = async () => {
+    if (!newCheckItem.trim()) return;
+    const item = await api.addChecklistItem(card.id, newCheckItem.trim(), checklist.length);
+    setChecklist([...checklist, item]);
+    setNewCheckItem("");
+  };
+
+  const deleteCheckItem = async (id: string) => {
+    await api.deleteChecklistItem(id);
+    setChecklist(checklist.filter((i) => i.id !== id));
+  };
+
+  const saveDescription = async () => {
+    await api.updateCard(card.id, { description });
+  };
+
+  const savePriority = async (p: Priority) => {
+    setPriority(p);
+    await api.updateCard(card.id, { priority: p });
+  };
+
+  const saveOwner = async (uid: string) => {
+    setOwnerId(uid);
+    await api.updateCard(card.id, { owner_id: uid || null });
+  };
+
+  const addComment = async () => {
+    if (!newComment.trim() || !currentUser) return;
+    const comment = await api.addComment(card.id, currentUser.id, newComment.trim());
+    setComments([...comments, comment]);
+    setNewComment("");
+  };
+
+  const deleteCardHandler = async () => {
+    await api.deleteCard(card.id);
+    refreshBoard();
   };
 
   const completedCount = checklist.filter(item => item.completed).length;
@@ -57,91 +104,113 @@ export function CardDetailPanel({ card, users, children }: CardDetailPanelProps)
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <label className="text-muted-foreground font-medium">Assignee</label>
-              <div className="flex items-center gap-2 mt-1">
-                {owner ? (
-                  <>
-                    <UserAvatar user={owner} className="h-6 w-6" />
-                    <span>{owner.name}</span>
-                  </>
-                ) : (
-                  <span className="text-muted-foreground">Unassigned</span>
-                )}
-              </div>
+              <Select value={ownerId} onValueChange={saveOwner}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Unassigned" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Unassigned</SelectItem>
+                  {users.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="text-muted-foreground font-medium">Priority</label>
-              <div className="mt-1">
-                <PriorityBadge priority={card.priority} textVisible />
-              </div>
+              <Select value={priority} onValueChange={(v) => savePriority(v as Priority)}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(["P0", "P1", "P2", "P3"] as Priority[]).map((p) => (
+                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           
           <div>
             <label className="text-muted-foreground font-medium">Description</label>
-            <Textarea defaultValue={card.description} className="mt-1 h-32" />
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              onBlur={saveDescription}
+              className="mt-1 h-32"
+            />
           </div>
 
-          {checklist.length > 0 && (
-            <div>
-              <label className="text-muted-foreground font-medium">Checklist</label>
-              <Progress value={progress} className="my-2 h-1" />
-              <div className="space-y-2 mt-2">
-                {checklist.map((item) => (
-                  <div key={item.id} className="flex items-center gap-3">
-                    <Checkbox
-                      id={item.id}
-                      checked={item.completed}
-                      onCheckedChange={() => toggleChecklistItem(item.id)}
-                    />
-                    <label htmlFor={item.id} className="text-sm flex-1 cursor-pointer">{item.text}</label>
-                     <Button variant="ghost" size="icon" className="h-6 w-6 opacity-50 hover:opacity-100">
-                      <Icons.trash className="h-3 w-3"/>
-                    </Button>
-                  </div>
-                ))}
+          <div>
+            <label className="text-muted-foreground font-medium">Checklist</label>
+            {checklist.length > 0 && <Progress value={progress} className="my-2 h-1" />}
+            <div className="space-y-2 mt-2">
+              {checklist.map((item) => (
+                <div key={item.id} className="flex items-center gap-3">
+                  <Checkbox
+                    id={item.id}
+                    checked={item.completed}
+                    onCheckedChange={() => toggleChecklistItem(item.id)}
+                  />
+                  <label htmlFor={item.id} className="text-sm flex-1 cursor-pointer">{item.text}</label>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 opacity-50 hover:opacity-100" onClick={() => deleteCheckItem(item.id)}>
+                    <Icons.trash className="h-3 w-3"/>
+                  </Button>
+                </div>
+              ))}
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Add checklist item..."
+                  value={newCheckItem}
+                  onChange={(e) => setNewCheckItem(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addCheckItem()}
+                />
+                <Button size="sm" variant="secondary" onClick={addCheckItem} disabled={!newCheckItem.trim()}>Add</Button>
               </div>
             </div>
-          )}
+          </div>
 
           <div>
-             <label className="text-muted-foreground font-medium mb-2 block">Comments</label>
+            <label className="text-muted-foreground font-medium mb-2 block">Comments</label>
             <div className="space-y-4">
-              {card.comments.map(comment => {
-                  const author = users.find(u => u.id === comment.author_id);
-                  return (
-                     <div key={comment.id} className="flex items-start gap-3">
-                        <UserAvatar user={author} className="h-8 w-8 mt-1" />
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-semibold text-foreground">{author?.name}</span>
-                            <span className="text-xs text-muted-foreground">{format(new Date(comment.created_at), "MMM d")}</span>
-                          </div>
-                          <div className="text-sm text-muted-foreground bg-secondary/50 rounded-lg p-2 mt-1">
-                            {comment.text}
-                          </div>
-                        </div>
-                     </div>
-                  );
+              {comments.map(comment => {
+                const author = users.find(u => u.id === comment.author_id);
+                return (
+                  <div key={comment.id} className="flex items-start gap-3">
+                    <UserAvatar user={author} className="h-8 w-8 mt-1" />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-foreground">{author?.name ?? "Unknown"}</span>
+                        <span className="text-xs text-muted-foreground">{format(new Date(comment.created_at), "MMM d")}</span>
+                      </div>
+                      <div className="text-sm text-muted-foreground bg-secondary/50 rounded-lg p-2 mt-1">
+                        {comment.text}
+                      </div>
+                    </div>
+                  </div>
+                );
               })}
               <div className="flex items-start gap-3">
-                <UserAvatar user={users[0]} className="h-8 w-8 mt-1"/>
-                <div className="flex-1">
-                  <Input placeholder="Add a comment..."/>
+                <UserAvatar user={currentUser ? { id: currentUser.id, name: currentUser.name, avatarUrl: currentUser.avatarUrl } : undefined} className="h-8 w-8 mt-1"/>
+                <div className="flex-1 flex gap-2">
+                  <Input
+                    placeholder="Add a comment..."
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && addComment()}
+                  />
+                  <Button size="sm" onClick={addComment} disabled={!newComment.trim()}>Send</Button>
                 </div>
               </div>
             </div>
           </div>
-
         </div>
         </div>
         </ScrollArea>
-        <div className="p-6 border-t bg-background mt-auto">
-            <CloseWithEvidenceModal card={card}>
-                <Button className="w-full" variant="secondary">
-                <Icons.archive className="mr-2 h-4 w-4" />
-                Close with Evidence
-                </Button>
-            </CloseWithEvidenceModal>
+        <div className="p-6 border-t bg-background mt-auto flex gap-2">
+          <Button variant="destructive" size="sm" onClick={deleteCardHandler}>
+            <Icons.trash className="mr-2 h-4 w-4" /> Delete Card
+          </Button>
         </div>
       </SheetContent>
     </Sheet>
