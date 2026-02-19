@@ -75,7 +75,7 @@ describe("findDoneColumn", () => {
 
 describe("close-with-evidence flow integration", () => {
   it("calls moveCard when evidence is approved", async () => {
-    const mockMoveCard = jest.fn().mockResolvedValue(undefined);
+    const mockMoveCard = vi.fn().mockResolvedValue(undefined);
     const assessment: AssessmentResult = { relevanceScore: 90, feedback: "Excellent evidence" };
 
     if (shouldMoveCardToDone(assessment)) {
@@ -87,7 +87,7 @@ describe("close-with-evidence flow integration", () => {
   });
 
   it("does NOT call moveCard when evidence is rejected", async () => {
-    const mockMoveCard = jest.fn().mockResolvedValue(undefined);
+    const mockMoveCard = vi.fn().mockResolvedValue(undefined);
     const assessment: AssessmentResult = { relevanceScore: 40, feedback: "Insufficient" };
 
     if (shouldMoveCardToDone(assessment)) {
