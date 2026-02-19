@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Icons } from '@/components/icons';
 import { useBoardContext } from '@/lib/board-context';
+import { useToast } from '@/hooks/use-toast';
 
 interface KanbanColumnProps {
   column: Column;
@@ -23,8 +24,16 @@ export function KanbanColumn({ column, cards, users, onCardDrop, laneId }: Kanba
   const [adding, setAdding] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const { addCard } = useBoardContext();
+  const { toast } = useToast();
+
+  const wipLimit = column.wip_limit;
+  const cardCount = cards.length;
+  const atWipLimit = wipLimit !== null && cardCount === wipLimit;
+  const overWipLimit = wipLimit !== null && cardCount > wipLimit;
+  const isWipBlocked = wipLimit !== null && cardCount >= wipLimit;
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (isWipBlocked) return;
     e.preventDefault();
     setIsOver(true);
   };
@@ -36,6 +45,14 @@ export function KanbanColumn({ column, cards, users, onCardDrop, laneId }: Kanba
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsOver(false);
+    if (isWipBlocked) {
+      toast({
+        title: "WIP limit reached",
+        description: `"${column.name}" has reached its WIP limit of ${wipLimit}. Move or complete a card first.`,
+        variant: "destructive",
+      });
+      return;
+    }
     const cardId = e.dataTransfer.getData('cardId');
     if (cardId) {
       onCardDrop(cardId, column.id, laneId);
@@ -49,11 +66,6 @@ export function KanbanColumn({ column, cards, users, onCardDrop, laneId }: Kanba
     setAdding(false);
   };
 
-  const wipLimit = column.wip_limit;
-  const cardCount = cards.length;
-  const atWipLimit = wipLimit !== null && cardCount === wipLimit;
-  const overWipLimit = wipLimit !== null && cardCount > wipLimit;
-
   return (
     <div
       onDragOver={handleDragOver}
@@ -61,7 +73,8 @@ export function KanbanColumn({ column, cards, users, onCardDrop, laneId }: Kanba
       onDrop={handleDrop}
       className={cn(
         "w-72 flex-shrink-0 rounded-lg",
-        isOver && "bg-secondary"
+        isOver && !isWipBlocked && "bg-secondary",
+        isWipBlocked && "opacity-60"
       )}
     >
       <div className="flex items-center justify-between p-2">
@@ -75,7 +88,7 @@ export function KanbanColumn({ column, cards, users, onCardDrop, laneId }: Kanba
               variant={overWipLimit ? 'destructive' : 'secondary'}
               className={cn(atWipLimit && 'bg-amber-500/80 text-white')}
             >
-              {wipLimit}
+              {cardCount}/{wipLimit}
             </Badge>
           )}
           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setAdding(true)}>
