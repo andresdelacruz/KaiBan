@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icons } from "@/components/icons";
@@ -18,11 +19,14 @@ import { useBoardContext } from "@/lib/board-context";
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { currentUser, boards, currentBoard, selectBoard } = useBoardContext();
+  const { currentUser, boards, currentBoard, selectBoard, createBoard } = useBoardContext();
+  const [showNewBoard, setShowNewBoard] = useState(false);
+  const [newBoardName, setNewBoardName] = useState("");
 
   const navItems = [
     { href: "/", label: "Board", icon: Icons.board },
     { href: "/backlog", label: "Backlog", icon: Icons.backlog },
+    { href: "/metrics", label: "Metrics", icon: Icons.metrics },
     { href: "/settings", label: "Settings", icon: Icons.settings },
   ];
 
@@ -56,6 +60,31 @@ export function AppSidebar() {
                   {board.name}
                 </DropdownMenuItem>
               ))}
+              <DropdownMenuSeparator />
+              {showNewBoard ? (
+                <div className="px-2 py-1.5 flex gap-1">
+                  <input
+                    autoFocus
+                    className="flex-1 text-sm bg-transparent border border-border rounded px-2 py-1 outline-none focus:ring-1 focus:ring-ring"
+                    placeholder="Board name…"
+                    value={newBoardName}
+                    onChange={(e) => setNewBoardName(e.target.value)}
+                    onKeyDown={async (e) => {
+                      if (e.key === "Enter" && newBoardName.trim()) {
+                        await createBoard(newBoardName.trim());
+                        setNewBoardName("");
+                        setShowNewBoard(false);
+                      }
+                      if (e.key === "Escape") setShowNewBoard(false);
+                    }}
+                  />
+                </div>
+              ) : (
+                <DropdownMenuItem onClick={(e) => { e.preventDefault(); setShowNewBoard(true); }}>
+                  <Icons.plus className="mr-2 h-4 w-4" />
+                  New Board
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 
