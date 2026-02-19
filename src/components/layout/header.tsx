@@ -5,6 +5,7 @@ import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/providers";
 import { NewCardModal } from "@/components/card/new-card-modal";
+import { AICreateCardModal } from "@/components/card/ai-create-card-modal";
 
 export function AppHeader() {
   const pathname = usePathname();
@@ -36,6 +37,14 @@ export function AppHeader() {
          <Button variant="ghost" size="icon">
           <Icons.download className="h-4 w-4" />
         </Button>
+        {pathname === "/" && (
+          <AICreateCardModal>
+            <Button variant="secondary">
+              <Icons.sparkles className="mr-2 h-4 w-4" />
+              Create with AI
+            </Button>
+          </AICreateCardModal>
+        )}
         <NewCardModal>
           <Button>
             <Icons.plus className="mr-2 h-4 w-4" />
