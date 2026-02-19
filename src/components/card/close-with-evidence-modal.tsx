@@ -18,17 +18,29 @@ import { assessEvidenceRelevance, AssessEvidenceRelevanceOutput } from "@/ai/flo
 import { Icons } from "../icons";
 import { Badge } from "../ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
+import { useBoardContext } from "@/lib/board-context";
 
 interface CloseWithEvidenceModalProps {
   children: React.ReactNode;
   card: Card;
 }
 
+export const EVIDENCE_SCORE_THRESHOLD = 70;
+
 export function CloseWithEvidenceModal({ children, card }: CloseWithEvidenceModalProps) {
   const [evidence, setEvidence] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const [assessment, setAssessment] = useState<AssessEvidenceRelevanceOutput | null>(null);
+  const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const { columns, moveCard } = useBoardContext();
+
+  const resetState = () => {
+    setAssessment(null);
+    setEvidence("");
+    setIsClosing(false);
+  };
 
   const handleSubmit = async () => {
     if (!evidence.trim()) {
@@ -63,9 +75,45 @@ export function CloseWithEvidenceModal({ children, card }: CloseWithEvidenceModa
     }
   };
 
+  const handleConfirmClose = async () => {
+    if (!assessment || assessment.relevanceScore <= EVIDENCE_SCORE_THRESHOLD) return;
+
+    const doneColumn = columns.find(c => c.name.toLowerCase() === "done");
+    if (!doneColumn) {
+      toast({
+        variant: "destructive",
+        title: "Column Not Found",
+        description: "Could not find the Done column.",
+      });
+      return;
+    }
+
+    setIsClosing(true);
+    try {
+      await moveCard(card.id, doneColumn.id, card.lane_id ?? null);
+      toast({
+        title: "Card Closed",
+        description: `"${card.title}" moved to Done.`,
+      });
+      setOpen(false);
+      resetState();
+    } catch (error) {
+      console.error("Failed to move card:", error);
+      toast({
+        variant: "destructive",
+        title: "Failed to Close Card",
+        description: "Could not move card to Done. Please try again.",
+      });
+    } finally {
+      setIsClosing(false);
+    }
+  };
+
+  const isApproved = assessment !== null && assessment.relevanceScore > EVIDENCE_SCORE_THRESHOLD;
+
   return (
-    <Dialog onOpenChange={() => { setAssessment(null); setEvidence(''); }}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetState(); }}>
+      <DialogTrigger asChild onClick={() => setOpen(true)}>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-[625px]">
         <DialogHeader>
           <DialogTitle>Close Card: {card.title}</DialogTitle>
@@ -86,12 +134,17 @@ export function CloseWithEvidenceModal({ children, card }: CloseWithEvidenceModa
             <Alert>
               <AlertTitle className="flex items-center gap-2">
                 AI Assessment
-                <Badge variant={assessment.relevanceScore > 70 ? "default" : "destructive"}>
+                <Badge variant={isApproved ? "default" : "destructive"}>
                   Score: {assessment.relevanceScore}/100
                 </Badge>
               </AlertTitle>
               <AlertDescription>
                 {assessment.feedback}
+                {!isApproved && (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Score must exceed {EVIDENCE_SCORE_THRESHOLD} to close this card.
+                  </p>
+                )}
               </AlertDescription>
             </Alert>
           )}
@@ -99,7 +152,13 @@ export function CloseWithEvidenceModal({ children, card }: CloseWithEvidenceModa
         </div>
         <DialogFooter>
           {assessment ? (
-            <Button>Confirm Close</Button>
+            <Button
+              onClick={handleConfirmClose}
+              disabled={!isApproved || isClosing}
+            >
+              {isClosing && <Icons.sun className="mr-2 h-4 w-4 animate-spin" />}
+              {isApproved ? "Confirm Close" : "Evidence Insufficient"}
+            </Button>
           ) : (
             <Button onClick={handleSubmit} disabled={isLoading}>
               {isLoading && <Icons.sun className="mr-2 h-4 w-4 animate-spin" />}
