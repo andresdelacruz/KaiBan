@@ -27,6 +27,8 @@ import {
   Columns,
   Minus,
   BarChart2,
+  Sparkles,
+  Loader2,
 } from 'lucide-react';
 
 export const Icons = {
@@ -58,4 +60,6 @@ export const Icons = {
   columns: Columns,
   minus: Minus,
   metrics: BarChart2,
+  sparkles: Sparkles,
+  loader: Loader2,
 };

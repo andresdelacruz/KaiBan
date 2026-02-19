@@ -14,9 +14,11 @@ import {
 } from "recharts";
 import { useBoardContext } from "@/lib/board-context";
 import type { MetricsResponse } from "@/app/api/metrics/route";
+import { generateMetricsCSV } from "@/lib/csv-export";
 import { Icons } from "@/components/icons";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 function StatCard({
   title,
@@ -50,12 +52,17 @@ export function MetricsDashboard() {
   const [metrics, setMetrics] = useState<MetricsResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
 
   useEffect(() => {
     if (!currentBoard?.id) return;
     setLoading(true);
     setError(null);
-    fetch(`/api/metrics?boardId=${currentBoard.id}`)
+    const params = new URLSearchParams({ boardId: currentBoard.id });
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
+    fetch(`/api/metrics?${params.toString()}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.error) throw new Error(data.error);
@@ -63,7 +70,19 @@ export function MetricsDashboard() {
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [currentBoard?.id]);
+  }, [currentBoard?.id, from, to]);
+
+  function handleExportCSV() {
+    if (!metrics) return;
+    const csv = generateMetricsCSV(metrics, metrics.cards ?? []);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `metrics-${currentBoard?.name ?? "board"}-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 
   if (!currentBoard) {
     return (
@@ -93,14 +112,57 @@ export function MetricsDashboard() {
 
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-full">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Icons.metrics className="h-6 w-6" />
-          Metrics — {currentBoard.name}
-        </h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Performance overview · Last 30 days
-        </p>
+      {/* Header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Icons.metrics className="h-6 w-6" />
+            Metrics — {currentBoard.name}
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Performance overview · Last 30 days
+          </p>
+        </div>
+
+        {/* Date range + Export */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1">
+            <label className="text-xs text-muted-foreground whitespace-nowrap">From</label>
+            <input
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+              className="text-xs border border-border rounded px-2 py-1 bg-background text-foreground"
+            />
+          </div>
+          <div className="flex items-center gap-1">
+            <label className="text-xs text-muted-foreground whitespace-nowrap">To</label>
+            <input
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              className="text-xs border border-border rounded px-2 py-1 bg-background text-foreground"
+            />
+          </div>
+          {(from || to) && (
+            <button
+              onClick={() => { setFrom(""); setTo(""); }}
+              className="text-xs text-muted-foreground underline"
+            >
+              Clear
+            </button>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleExportCSV}
+            disabled={!metrics}
+            className="gap-1"
+          >
+            <Icons.metrics className="h-3.5 w-3.5" />
+            Export CSV
+          </Button>
+        </div>
       </div>
 
       {/* Summary cards */}
@@ -145,7 +207,7 @@ export function MetricsDashboard() {
                 <XAxis
                   dataKey="date"
                   tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                  tickFormatter={(v) => v.slice(5)} // MM-DD
+                  tickFormatter={(v) => v.slice(5)}
                 />
                 <YAxis
                   allowDecimals={false}
